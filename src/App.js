@@ -31,6 +31,11 @@ function App() {
   const [apiUrl, setApiUrl] = useState(getBackendUrl());
   const [showApiSettings, setShowApiSettings] = useState(false);
 
+  // Vercel auto-config detector
+  const isVercelWithoutBackend = window.location.hostname.includes('vercel.app') && 
+    !localStorage.getItem('backend_url') && 
+    !process.env.REACT_APP_API_URL;
+
   // UI state
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, history
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -67,6 +72,16 @@ function App() {
     setApiUrl(newUrl);
     localStorage.setItem('backend_url', newUrl);
   };
+
+  // Warn Vercel users to set API URL
+  useEffect(() => {
+    if (isVercelWithoutBackend) {
+      setLoginError('Please configure your Render API Server URL first. (សូមកំណត់អាសយដ្ឋាន API Server របស់ Render ជាមុនសិន)');
+      setShowApiSettings(true);
+    } else {
+      setLoginError('');
+    }
+  }, [isVercelWithoutBackend]);
 
   // Poll backend status
   const checkStatus = async () => {
@@ -105,7 +120,6 @@ function App() {
         clearInterval(pollingInterval.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiUrl]);
 
   // Auto scroll active logs console to bottom
@@ -159,6 +173,12 @@ function App() {
           password: loginPassword,
         }),
       });
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response from server. Make sure your API Server URL is correct.');
+      }
+      
       const data = await response.json();
       
       if (!response.ok) {
@@ -170,7 +190,12 @@ function App() {
       setLoginNumber('');
       setLoginPassword('');
     } catch (err) {
-      if (err.message.includes('Failed to fetch') || err.message.includes('fetch')) {
+      if (
+        err.message.includes('Failed to fetch') || 
+        err.message.includes('fetch') || 
+        err.message.includes('JSON') || 
+        err.message.includes('response from server')
+      ) {
         setLoginError('Connection failed. Please check if your API Server URL is correct. (មិនអាចភ្ជាប់ទៅកាន់ Server ទេ។ សូមពិនិត្យមើលអាសយដ្ឋាន API Server របស់អ្នក)');
         setShowApiSettings(true);
       } else {
