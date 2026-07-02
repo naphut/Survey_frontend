@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // Dynamic Backend URL supporting local dev, same-origin Render, and Vercel environment variables
-const BACKEND_URL = process.env.REACT_APP_API_URL || 
+let BACKEND_URL = process.env.REACT_APP_API_URL || 
   (window.location.port === '3000'
     ? `http://${window.location.hostname}:5001`
     : window.location.origin);
+
+// Bulletproof HTTPS / Mixed Content Guard
+if (window.location.protocol === 'https:' && BACKEND_URL.startsWith('http://') && !BACKEND_URL.includes('localhost') && !BACKEND_URL.includes('127.0.0.1')) {
+  BACKEND_URL = BACKEND_URL.replace('http://', 'https://');
+}
 
 function App() {
   // Auth state
