@@ -1,15 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// Dynamic Backend URL supporting local dev, same-origin Render, and Vercel environment variables
-let BACKEND_URL = process.env.REACT_APP_API_URL || 
-  (window.location.port === '3000'
-    ? `http://${window.location.hostname}:5001`
-    : window.location.origin);
+// Resolve Backend API URL:
+// 1. Check if backend_url is saved in localStorage
+// 2. Fallback to process.env.REACT_APP_API_URL
+// 3. Fallback to localhost:5001 if running on local dev port 3000
+// 4. Fallback to window.location.origin
+const getBackendUrl = () => {
+  const saved = localStorage.getItem('backend_url');
+  if (saved) return saved;
 
-// Bulletproof HTTPS / Mixed Content Guard
-if (window.location.protocol === 'https:' && BACKEND_URL.startsWith('http://') && !BACKEND_URL.includes('localhost') && !BACKEND_URL.includes('127.0.0.1')) {
-  BACKEND_URL = BACKEND_URL.replace('http://', 'https://');
-}
+  let defaultUrl = process.env.REACT_APP_API_URL || 
+    (window.location.port === '3000'
+      ? `http://${window.location.hostname}:5001`
+      : window.location.origin);
+
+  if (window.location.protocol === 'https:' && defaultUrl.startsWith('http://') && !defaultUrl.includes('localhost') && !defaultUrl.includes('127.0.0.1')) {
+    defaultUrl = defaultUrl.replace('http://', 'https://');
+  }
+  return defaultUrl;
+};
 
 function App() {
   // Auth state
@@ -17,6 +26,10 @@ function App() {
   const [loginNumber, setLoginNumber] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  // API Configuration state
+  const [apiUrl, setApiUrl] = useState(getBackendUrl());
+  const [showApiSettings, setShowApiSettings] = useState(false);
 
   // UI state
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, history
@@ -49,10 +62,16 @@ function App() {
   const consoleEndRef = useRef(null);
   const pollingInterval = useRef(null);
 
+  // Save API URL in state and localStorage
+  const saveApiUrl = (newUrl) => {
+    setApiUrl(newUrl);
+    localStorage.setItem('backend_url', newUrl);
+  };
+
   // Poll backend status
   const checkStatus = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/status`);
+      const response = await fetch(`${apiUrl}/api/status`);
       if (!response.ok) throw new Error('Failed to fetch status');
       const data = await response.json();
       
@@ -86,7 +105,7 @@ function App() {
         clearInterval(pollingInterval.current);
       }
     };
-  }, []);
+  }, [apiUrl]);
 
   // Auto scroll active logs console to bottom
   useEffect(() => {
@@ -99,7 +118,7 @@ function App() {
   const fetchHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/history`);
+      const response = await fetch(`${apiUrl}/api/history`);
       if (!response.ok) throw new Error('Failed to fetch history');
       const data = await response.json();
       setHistoryList(data || []);
@@ -115,7 +134,7 @@ function App() {
     setSelectedRun(run);
     setHistoryLogs([]);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/history/${run.id}/logs`);
+      const response = await fetch(`${apiUrl}/api/history/${run.id}/logs`);
       if (!response.ok) throw new Error('Failed to fetch run logs');
       const data = await response.json();
       setHistoryLogs(data || []);
@@ -129,7 +148,7 @@ function App() {
     e.preventDefault();
     setLoginError('');
     try {
-      const response = await fetch(`${BACKEND_URL}/api/login`, {
+      const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +169,12 @@ function App() {
       setLoginNumber('');
       setLoginPassword('');
     } catch (err) {
-      setLoginError(err.message || 'Connection failed. Is the backend server running?');
+      if (err.message.includes('Failed to fetch') || err.message.includes('fetch')) {
+        setLoginError('Connection failed. Please check if your API Server URL is correct. (មិនអាចភ្ជាប់ទៅកាន់ Server ទេ។ សូមពិនិត្យមើលអាសយដ្ឋាន API Server របស់អ្នក)');
+        setShowApiSettings(true);
+      } else {
+        setLoginError(err.message || 'Connection failed.');
+      }
     }
   };
 
@@ -176,7 +200,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/start`, {
+      const response = await fetch(`${apiUrl}/api/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -210,7 +234,7 @@ function App() {
   // Stop the bot
   const handleStop = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/stop`, {
+      const response = await fetch(`${apiUrl}/api/stop`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -283,6 +307,37 @@ function App() {
             <button type="submit" className="action-button btn-start" style={{ marginTop: '0.5rem' }}>
               🔑 Log In (ចូលប្រព័ន្ធ)
             </button>
+            
+            {/* API settings link */}
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+              <button 
+                type="button" 
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                onClick={() => setShowApiSettings(!showApiSettings)}
+              >
+                ⚙️ {showApiSettings ? 'Hide API Settings (លាក់ការកំណត់)' : 'Change API Server URL (ផ្លាស់ប្តូរ Server)'}
+              </button>
+            </div>
+            
+            {showApiSettings && (
+              <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <label htmlFor="apiUrlInput" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Backend Server URL (អាសយដ្ឋាន API)
+                </label>
+                <input
+                  id="apiUrlInput"
+                  type="text"
+                  className="input-field"
+                  style={{ fontSize: '0.85rem', padding: '0.6rem 0.8rem', marginTop: '4px' }}
+                  placeholder="https://your-app.onrender.com"
+                  value={apiUrl}
+                  onChange={(e) => saveApiUrl(e.target.value)}
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '6px' }}>
+                  Enter your Render URL (ឧទាហរណ៍៖ https://survey-hf6f.onrender.com)
+                </span>
+              </div>
+            )}
           </form>
         </div>
       </div>
