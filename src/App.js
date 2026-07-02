@@ -120,6 +120,7 @@ function App() {
         clearInterval(pollingInterval.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiUrl]);
 
   // Auto scroll active logs console to bottom
