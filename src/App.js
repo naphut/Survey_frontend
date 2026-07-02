@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// Dynamic Backend URL based on host (defaults to port 5001)
-const BACKEND_URL = `http://${window.location.hostname}:5001`;
+// Dynamic Backend URL supporting local dev, same-origin Render, and Vercel environment variables
+const BACKEND_URL = process.env.REACT_APP_API_URL || 
+  (window.location.port === '3000'
+    ? `http://${window.location.hostname}:5001`
+    : window.location.origin);
 
 function App() {
   // Auth state
