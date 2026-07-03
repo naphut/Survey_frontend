@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import logo from './logo.svg';
 
 // Resolve Backend API URL:
 // 1. Check if backend_url is saved in localStorage
@@ -340,8 +341,8 @@ function App() {
           </button>
         </div>
         <div className="logo-container">
-          <div className="logo-icon">⚡</div>
-          <h1>Auto Survey UI</h1>
+          <img src={logo} alt="Survey Bot" className="logo-icon" />
+          <h1>Survey Bot – Auto Form Filler</h1>
         </div>
         <p className="subtitle">
           Submit responses automatically to Google Forms in parallel
