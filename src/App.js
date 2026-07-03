@@ -12,7 +12,7 @@ const getBackendUrl = () => {
   let defaultUrl = process.env.REACT_APP_API_URL || 
     (window.location.port === '3000'
       ? `http://${window.location.hostname}:5001`
-      : window.location.origin);
+      : 'https://survey-hf6f.onrender.com');
 
   if (window.location.protocol === 'https:' && defaultUrl.startsWith('http://') && !defaultUrl.includes('localhost') && !defaultUrl.includes('127.0.0.1')) {
     defaultUrl = defaultUrl.replace('http://', 'https://');
