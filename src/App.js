@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 // 1. Check if backend_url is saved in localStorage
 // 2. Fallback to process.env.REACT_APP_API_URL
 // 3. Fallback to localhost:5001 if running on local dev port 3000
-// 4. Fallback to window.location.origin
+// 4. Fallback to https://survey-hf6f.onrender.com (hardcoded default)
 const getBackendUrl = () => {
   const saved = localStorage.getItem('backend_url');
   if (saved) return saved;
@@ -27,14 +27,8 @@ function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // API Configuration state
-  const [apiUrl, setApiUrl] = useState(getBackendUrl());
-  const [showApiSettings, setShowApiSettings] = useState(false);
-
-  // Vercel auto-config detector
-  const isVercelWithoutBackend = window.location.hostname.includes('vercel.app') && 
-    !localStorage.getItem('backend_url') && 
-    !process.env.REACT_APP_API_URL;
+  // API Configuration state (keeps running dynamically in background)
+  const [apiUrl] = useState(getBackendUrl());
 
   // UI state
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, history
@@ -66,22 +60,6 @@ function App() {
 
   const consoleEndRef = useRef(null);
   const pollingInterval = useRef(null);
-
-  // Save API URL in state and localStorage
-  const saveApiUrl = (newUrl) => {
-    setApiUrl(newUrl);
-    localStorage.setItem('backend_url', newUrl);
-  };
-
-  // Warn Vercel users to set API URL
-  useEffect(() => {
-    if (isVercelWithoutBackend) {
-      setLoginError('Please configure your Render API Server URL first. (សូមកំណត់អាសយដ្ឋាន API Server របស់ Render ជាមុនសិន)');
-      setShowApiSettings(true);
-    } else {
-      setLoginError('');
-    }
-  }, [isVercelWithoutBackend]);
 
   // Poll backend status
   const checkStatus = async () => {
@@ -198,7 +176,6 @@ function App() {
         err.message.includes('response from server')
       ) {
         setLoginError('Connection failed. Please check if your API Server URL is correct. (មិនអាចភ្ជាប់ទៅកាន់ Server ទេ។ សូមពិនិត្យមើលអាសយដ្ឋាន API Server របស់អ្នក)');
-        setShowApiSettings(true);
       } else {
         setLoginError(err.message || 'Connection failed.');
       }
@@ -335,36 +312,19 @@ function App() {
               🔑 Log In (ចូលប្រព័ន្ធ)
             </button>
             
-            {/* API settings link */}
-            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-              <button 
-                type="button" 
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                onClick={() => setShowApiSettings(!showApiSettings)}
+            {/* Telegram Contact Info */}
+            <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+              <a 
+                href="https://t.me/+855972021149" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'color 0.2s', fontFamily: 'var(--font-sans)' }}
+                onMouseEnter={(e) => e.target.style.color = '#7dd3fc'}
+                onMouseLeave={(e) => e.target.style.color = '#38bdf8'}
               >
-                ⚙️ {showApiSettings ? 'Hide API Settings (លាក់ការកំណត់)' : 'Change API Server URL (ផ្លាស់ប្តូរ Server)'}
-              </button>
+                ✈️ <strong>Contact Telegram:</strong> +855 97 202 1149
+              </a>
             </div>
-            
-            {showApiSettings && (
-              <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                <label htmlFor="apiUrlInput" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Backend Server URL (អាសយដ្ឋាន API)
-                </label>
-                <input
-                  id="apiUrlInput"
-                  type="text"
-                  className="input-field"
-                  style={{ fontSize: '0.85rem', padding: '0.6rem 0.8rem', marginTop: '4px' }}
-                  placeholder="https://your-app.onrender.com"
-                  value={apiUrl}
-                  onChange={(e) => saveApiUrl(e.target.value)}
-                />
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '6px' }}>
-                  Enter your Render URL (ឧទាហរណ៍៖ https://survey-hf6f.onrender.com)
-                </span>
-              </div>
-            )}
           </form>
         </div>
       </div>
